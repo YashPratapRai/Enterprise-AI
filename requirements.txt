@@ -1,0 +1,77 @@
+
+# 1. Backend API
+
+fastapi==0.115.12
+# FastAPI: Backend APIs and endpoints create karne ke liye.
+
+uvicorn[standard]==0.34.2
+# Uvicorn: FastAPI application ko run karne ke liye ASGI server.
+
+
+# 2. Configuration Management
+
+pydantic-settings==2.8.1
+# Pydantic Settings: Environment variables se configuration
+# aur application settings load/validate karne ke liye.
+
+
+# 3. AWS Integration
+
+boto3==1.37.38
+# Boto3: Python SDK for AWS.
+# S3 mein documents upload/download karne aur
+# Amazon Bedrock services access karne ke liye.
+
+
+# 4. PostgreSQL Database
+
+psycopg[binary,pool]==3.2.6
+# Psycopg: Python se PostgreSQL database connect karne ke liye.
+# Chat history, document metadata, HITL approvals,
+# feedback, audit events aur guardrail logs store karne ke liye.
+# binary: PostgreSQL driver binaries.
+# pool: Database connection pooling.
+
+
+# 5. Document Processing
+
+pypdf==5.4.0
+# PyPDF: PDF documents se text extract karne ke liye.
+
+python-docx==1.1.2
+# Python-docx: Word (.docx) documents read/process karne ke liye.
+
+
+
+# 6. HTTP Requests
+
+httpx==0.28.1
+# HTTPX: External services aur APIs ko HTTP requests bhejne ke liye.
+# Instructor ke project mein Bedrock-related API communication ke liye.
+
+
+# 7. RAG Workflow Orchestration
+
+langgraph>=0.2,<2
+# LangGraph: RAG workflow aur agent orchestration ke liye.
+# Different workflow steps ko manage karna, jaise:
+# document processing, retrieval, LLM response generation.
+
+
+# 8. Vector Database
+
+pinecone>=5,<9
+# Pinecone: Vector database.
+# Document chunks ke embeddings aur metadata store karne
+# aur semantic similarity search ke liye.
+
+
+# 9. Environment Variables
+
+python-dotenv==1.0.1
+# Python-dotenv: .env file se environment variables load karne ke liye.
+# AWS credentials/configuration aur database connection details
+# jaise sensitive configuration manage karne ke liye.
+
+# 10. Frontend UI
+streamlit==1.45.1
