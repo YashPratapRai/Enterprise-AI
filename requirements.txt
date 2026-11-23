@@ -75,3 +75,7 @@ python-dotenv==1.0.1
 
 # 10. Frontend UI
 streamlit==1.45.1
+
+##added because of groq and sentence-transformers( aws bedrock not working thats why i use this)
+groq
+sentence-transformers
