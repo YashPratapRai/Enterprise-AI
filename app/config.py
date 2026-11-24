@@ -8,9 +8,9 @@ class Settings(BaseSettings):
     aws_access_key_id:str=''
     aws_secret_access_key:str=''
     s3_bucket:str=''
-    database_url:str=''  # Render PostgreSQL External Database URL
+    database_url:str=''  # Render PostgreSQL External Database url
     groq_api_key: str = ''
-    groq_chat_model: str = 'llama-3.3-70b-versatile'
+    groq_chat_model: str = 'openai/gpt-oss-120b'
 
     bedrock_embed_model: str = 'BAAI/bge-small-en-v1.5'
     bedrock_chat_model: str = 'llama-3.3-70b-versatile'
