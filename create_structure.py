@@ -28,6 +28,7 @@ files = [
     "app/memory.py",
     "app/guardrails.py",
     "app/graph.py",
+    "app/observability.py",
 
     # Frontend - Streamlit
     "app/streamlit_app.py",

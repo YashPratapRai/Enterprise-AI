@@ -1,50 +1,61 @@
+
 import os
-import json
-import boto3
 from dotenv import load_dotenv
+from groq import Groq
+from sentence_transformers import SentenceTransformer
 
 load_dotenv()
 
-client = boto3.client(
-    "bedrock-runtime",
-    region_name=os.getenv("AWS_REGION"),
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+# -----------------------------------
+# Test 1: BGE Small Embeddings
+# -----------------------------------
+
+print("\nTesting BGE Embedding Model...")
+
+embedding_model = SentenceTransformer(
+    os.getenv(
+        "BEDROCK_EMBED_MODEL",
+        "BAAI/bge-small-en-v1.5"
+    )
 )
 
-# Test 1: Amazon Titan Embeddings
-embedding_response = client.invoke_model(
-    modelId=os.getenv("BEDROCK_EMBED_MODEL"),
-    body=json.dumps({
-        "inputText": "Hello Amazon Bedrock",
-        "dimensions": 1024,
-        "normalize": True
-    }),
-    contentType="application/json",
-    accept="application/json"
+embedding = embedding_model.encode(
+    "Hello Enterprise AI",
+    normalize_embeddings=True
 )
 
-embedding_data = json.loads(
-    embedding_response["body"].read()
+print("Embedding dimension:", len(embedding))
+print("Embedding successful!")
+
+
+# -----------------------------------
+# Test 2: Groq Chat Model
+# -----------------------------------
+
+print("\nTesting Groq Chat Model...")
+
+client = Groq(
+    api_key=os.getenv("GROQ_API_KEY")
 )
 
-print("Embedding dimension:", len(embedding_data["embedding"]))
-
-# Test 2: Amazon Nova Lite
-chat_response = client.converse(
-    modelId=os.getenv("BEDROCK_CHAT_MODEL"),
+chat_response = client.chat.completions.create(
+    model=os.getenv(
+        "BEDROCK_CHAT_MODEL",
+        "openai/gpt-oss-120b"
+    ),
     messages=[
         {
             "role": "user",
-            "content": [
-                {"text": "Explain RAG in one sentence."}
-            ]
+            "content": "Explain RAG in one sentence."
         }
     ],
-    inferenceConfig={"maxTokens": 200}
+    temperature=0.1,
+    max_tokens=200
 )
 
 print(
-    "Nova Response:",
-    chat_response["output"]["message"]["content"][0]["text"]
+    "Groq Response:",
+    chat_response.choices[0].message.content
 )
+
+print("\nAll model tests completed successfully!")
