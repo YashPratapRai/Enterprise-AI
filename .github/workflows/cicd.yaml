@@ -138,6 +138,20 @@ jobs:
           echo "ECR image URI constructed successfully"
 
       # ----------------------------------------
+      # CHECK DISK BEFORE IMAGE PULL
+      # ----------------------------------------
+
+      - name: Check EC2 Disk Space
+        run: |
+          set -euo pipefail
+
+          echo "Disk usage before deployment:"
+          df -h /
+
+          echo "Docker disk usage:"
+          docker system df
+
+      # ----------------------------------------
       # PULL IMAGE
       # ----------------------------------------
 
@@ -146,7 +160,11 @@ jobs:
           IMAGE: ${{ steps.image.outputs.image }}
         run: |
           set -euo pipefail
+
+          echo "Pulling Docker image..."
           docker pull "$IMAGE"
+
+          echo "Docker image pulled successfully"
 
       # ----------------------------------------
       # VALIDATE APPLICATION SECRETS
@@ -222,7 +240,7 @@ jobs:
           docker rm -f enterprise-ai || true
 
       # ----------------------------------------
-      # START NEW CONTAINER WITH GITHUB SECRETS
+      # START NEW CONTAINER
       # ----------------------------------------
 
       - name: Start New Container
@@ -251,7 +269,7 @@ jobs:
           # PostgreSQL
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-          # RIUS Observability
+          # RIUS
           RIUS_API_KEY: ${{ secrets.RIUS_API_KEY }}
           RIUS_SERVICE_NAME: ${{ secrets.RIUS_SERVICE_NAME }}
           RIUS_DISABLED: ${{ secrets.RIUS_DISABLED }}
@@ -290,6 +308,8 @@ jobs:
             -p 8000:8000 \
             "$IMAGE"
 
+          echo "New container started"
+
       # ----------------------------------------
       # VERIFY DEPLOYMENT
       # ----------------------------------------
@@ -309,18 +329,36 @@ jobs:
             exit 1
           fi
 
-          curl --fail --silent --show-error \
-            --retry 5 \
+          if ! curl --fail --silent --show-error \
+            --retry 10 \
             --retry-delay 3 \
-             http://127.0.0.1:8000/health/live \
-            > /dev/null
+            --retry-connrefused \
+            --max-time 10 \
+            http://127.0.0.1:8000/health/live \
+            > /dev/null; then
+
+            echo "::error::Health check failed"
+            docker logs --tail 100 enterprise-ai
+            exit 1
+          fi
 
           echo "Enterprise AI deployed successfully"
 
       # ----------------------------------------
-      # CLEANUP
+      # CLEANUP OLD UNUSED DOCKER IMAGES
       # ----------------------------------------
 
       - name: Clean Unused Docker Images
         run: |
-          docker image prune -f
+          set -euo pipefail
+
+          echo "Removing unused Docker images..."
+          docker image prune -a -f
+
+          echo "Final disk usage:"
+          df -h /
+
+          echo "Final Docker disk usage:"
+          docker system df
+
+          echo "Docker cleanup completed"
