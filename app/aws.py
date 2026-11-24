@@ -1,4 +1,4 @@
-
+#this code has been updated as per groq and sentence transformer 
 import json
 from functools import lru_cache
 
