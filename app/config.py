@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     groq_chat_model: str = 'openai/gpt-oss-120b'
 
     bedrock_embed_model: str = 'BAAI/bge-small-en-v1.5'
-    bedrock_chat_model: str = 'llama-3.3-70b-versatile'
+    bedrock_chat_model: str = 'openai/gpt-oss-120b'
     embed_dim: int = 384
     #bedrock_embed_model:str='amazon.titan-embed-text-v2:0'
     #bedrock_chat_model:str='amazon.nova-lite-v1:0'
