@@ -41,7 +41,7 @@ jobs:
           python -m compileall -q app worker scripts
 
   # ==========================================
-  # 2. CONTINUOUS DELIVERY - BUILD AND PUSH ECR
+  # 2. BUILD AND PUSH IMAGE TO ECR
   # ==========================================
 
   build-and-push-ecr-image:
@@ -81,19 +81,18 @@ jobs:
           echo "Building Docker image..."
           docker build -t "$IMAGE" .
 
-          echo "Pushing image to Amazon ECR..."
+          echo "Pushing Docker image to ECR..."
           docker push "$IMAGE"
 
           echo "Docker image pushed successfully"
 
   # ==========================================
-  # 3. CONTINUOUS DEPLOYMENT - EC2
+  # 3. DEPLOY TO EC2
   # ==========================================
 
   continuous-deployment:
     name: Continuous Deployment
     needs: build-and-push-ecr-image
-
     runs-on: [self-hosted, linux, x64, enterprise-ai-ec2]
     environment: production
 
@@ -114,7 +113,7 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       # ----------------------------------------
-      # CONSTRUCT DOCKER IMAGE URI
+      # CONSTRUCT IMAGE URI
       # ----------------------------------------
 
       - name: Construct ECR Image URI
@@ -131,21 +130,20 @@ jobs:
             --output text)
 
           REGISTRY="${ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
-
           IMAGE="${REGISTRY}/${ECR_REPOSITORY}:${IMAGE_TAG}"
 
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
           echo "ECR image URI constructed successfully"
 
       # ----------------------------------------
-      # CHECK DISK BEFORE IMAGE PULL
+      # DISK CHECK
       # ----------------------------------------
 
       - name: Check EC2 Disk Space
         run: |
           set -euo pipefail
 
-          echo "Disk usage before deployment:"
+          echo "Disk usage:"
           df -h /
 
           echo "Docker disk usage:"
@@ -161,7 +159,6 @@ jobs:
         run: |
           set -euo pipefail
 
-          echo "Pulling Docker image..."
           docker pull "$IMAGE"
 
           echo "Docker image pulled successfully"
@@ -232,7 +229,7 @@ jobs:
           echo "All required application secrets are available"
 
       # ----------------------------------------
-      # STOP EXISTING CONTAINER
+      # STOP OLD CONTAINER
       # ----------------------------------------
 
       - name: Stop Old Container
@@ -247,35 +244,29 @@ jobs:
         env:
           IMAGE: ${{ steps.image.outputs.image }}
 
-          # AWS
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           AWS_REGION: ${{ secrets.AWS_REGION }}
           AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
           S3_BUCKET: ${{ secrets.S3_BUCKET }}
 
-          # Bedrock
           BEDROCK_EMBED_MODEL: ${{ secrets.BEDROCK_EMBED_MODEL }}
           BEDROCK_CHAT_MODEL: ${{ secrets.BEDROCK_CHAT_MODEL }}
           EMBED_DIM: ${{ secrets.EMBED_DIM }}
 
-          # Pinecone
           PINECONE_API_KEY: ${{ secrets.PINECONE_API_KEY }}
           PINECONE_INDEX_NAME: ${{ secrets.PINECONE_INDEX_NAME }}
           PINECONE_CLOUD: ${{ secrets.PINECONE_CLOUD }}
           PINECONE_REGION: ${{ secrets.PINECONE_REGION }}
           PINECONE_READY_TIMEOUT: ${{ secrets.PINECONE_READY_TIMEOUT }}
 
-          # PostgreSQL
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
 
-          # RIUS
           RIUS_API_KEY: ${{ secrets.RIUS_API_KEY }}
           RIUS_SERVICE_NAME: ${{ secrets.RIUS_SERVICE_NAME }}
           RIUS_DISABLED: ${{ secrets.RIUS_DISABLED }}
           RIUS_CAPTURE_CONTENT: ${{ secrets.RIUS_CAPTURE_CONTENT }}
 
-          # Application
           HITL_ENABLED: ${{ secrets.HITL_ENABLED }}
           MEMORY_TURNS: ${{ secrets.MEMORY_TURNS }}
 
@@ -311,6 +302,30 @@ jobs:
           echo "New container started"
 
       # ----------------------------------------
+      # DIAGNOSE DEPLOYMENT CONNECTION
+      # ----------------------------------------
+
+      - name: Diagnose Deployment Connection
+        run: |
+          echo "===== RUNNER INFORMATION ====="
+          hostname
+          whoami
+          pwd
+
+          echo "===== CONTAINER STATUS ====="
+          docker ps -a --filter name=enterprise-ai
+
+          echo "===== PORT 8000 ====="
+          sudo ss -lntp | grep 8000 || true
+
+          echo "===== HEALTH CHECK ====="
+          curl -v --connect-timeout 5 --max-time 10 \
+            http://127.0.0.1:8000/health/live || true
+
+          echo "===== CONTAINER LOGS ====="
+          docker logs --tail 50 enterprise-ai
+
+      # ----------------------------------------
       # VERIFY DEPLOYMENT
       # ----------------------------------------
 
@@ -318,6 +333,7 @@ jobs:
         run: |
           set -euo pipefail
 
+          echo "Waiting for application startup..."
           sleep 10
 
           if ! docker inspect \
@@ -345,10 +361,11 @@ jobs:
           echo "Enterprise AI deployed successfully"
 
       # ----------------------------------------
-      # CLEANUP OLD UNUSED DOCKER IMAGES
+      # CLEAN UNUSED DOCKER IMAGES
       # ----------------------------------------
 
       - name: Clean Unused Docker Images
+        if: success()
         run: |
           set -euo pipefail
 
