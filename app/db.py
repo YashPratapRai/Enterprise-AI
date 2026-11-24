@@ -6,7 +6,7 @@ from app.config import settings
 
 @contextmanager
 def connection():
-    # Render provides a PostgreSQL connection URL. Prefer its external URL
+    # Render provides a PostgreSQL connection URL. Prefer its external url
     # for a FastAPI process running on your computer.
     url = settings().database_url
     if not url:
